@@ -95,11 +95,13 @@ func (a *App) IsWindowVisible() bool {
 	return a.windowVisible
 }
 
-// RunTray initializes the system tray
+// Initializes the system tray
 func (a *App) RunTray() {
 	systray.Run(func() {
 		systray.SetTitle("Mic Toggle")
 		systray.SetTooltip("Mic Toggle App")
+
+		// TODO: Fix invisible icon
 		systray.SetIcon(icon)
 
 		// Click event toggles window visibility
