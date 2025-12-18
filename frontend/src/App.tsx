@@ -1,3 +1,4 @@
+import HotkeyOptions from "./components/HotkeyOptions";
 import HotkeyPicker from "./components/HotkeyPicker";
 
 function App() {
@@ -6,6 +7,7 @@ function App() {
 			<h1 className="text-2xl font-bold mb-4">Mic Toggle Settings</h1>
 
 			<HotkeyPicker />
+			<HotkeyOptions />
 		</div>
 	);
 }

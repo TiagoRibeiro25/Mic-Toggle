@@ -6,6 +6,14 @@ export function GetHotkey() {
   return window['go']['main']['App']['GetHotkey']();
 }
 
+export function GetPlayBeep() {
+  return window['go']['main']['App']['GetPlayBeep']();
+}
+
+export function GetShowNotification() {
+  return window['go']['main']['App']['GetShowNotification']();
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
@@ -24,6 +32,14 @@ export function RunTray() {
 
 export function SetHotkey(arg1) {
   return window['go']['main']['App']['SetHotkey'](arg1);
+}
+
+export function SetPlayBeep(arg1) {
+  return window['go']['main']['App']['SetPlayBeep'](arg1);
+}
+
+export function SetShowNotification(arg1) {
+  return window['go']['main']['App']['SetShowNotification'](arg1);
 }
 
 export function ShowWindow() {

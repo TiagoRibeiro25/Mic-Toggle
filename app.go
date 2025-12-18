@@ -41,10 +41,23 @@ func (a *App) startup(ctx context.Context) {
 	a.hotkeyListener.Start(a.config, func() {
 		fmt.Println("Hotkey pressed!")
 
-		err := beeep.Notify("Mic Toggle", "Hotkey pressed!", "")
-		if err != nil {
-			panic(err)
+		// Play beep if enabled
+		if a.config.PlayBeep {
+			err := beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+			if err != nil {
+				fmt.Println("Beep failed:", err)
+			}
 		}
+
+		// Show notification if enabled
+		if a.config.ShowNotification {
+			err := beeep.Notify("Mic Toggle", "Hotkey pressed!", "")
+			if err != nil {
+				fmt.Println("Notification failed:", err)
+			}
+		}
+
+		// TODO: toggle mic here if you want
 	})
 
 	// Start system tray in background
@@ -147,4 +160,22 @@ func (a *App) SetHotkey(hotkey string) error {
 	})
 
 	return nil
+}
+
+func (a *App) SetPlayBeep(enabled bool) error {
+	a.config.PlayBeep = enabled
+	return config.Save(a.config)
+}
+
+func (a *App) SetShowNotification(enabled bool) error {
+	a.config.ShowNotification = enabled
+	return config.Save(a.config)
+}
+
+func (a *App) GetPlayBeep() bool {
+	return a.config.PlayBeep
+}
+
+func (a *App) GetShowNotification() bool {
+	return a.config.ShowNotification
 }

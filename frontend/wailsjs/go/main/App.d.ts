@@ -3,6 +3,10 @@
 
 export function GetHotkey():Promise<string>;
 
+export function GetPlayBeep():Promise<boolean>;
+
+export function GetShowNotification():Promise<boolean>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function HideWindow():Promise<void>;
@@ -12,5 +16,9 @@ export function IsWindowVisible():Promise<boolean>;
 export function RunTray():Promise<void>;
 
 export function SetHotkey(arg1:string):Promise<void>;
+
+export function SetPlayBeep(arg1:boolean):Promise<void>;
+
+export function SetShowNotification(arg1:boolean):Promise<void>;
 
 export function ShowWindow():Promise<void>;

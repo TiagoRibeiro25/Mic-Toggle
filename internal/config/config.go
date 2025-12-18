@@ -7,7 +7,9 @@ import (
 )
 
 type Config struct {
-	Hotkey string `json:"hotkey"`
+	Hotkey           string `json:"hotkey"`
+	PlayBeep         bool   `json:"playBeep"`
+	ShowNotification bool   `json:"showNotification"`
 }
 
 func defaultConfig() *Config {
