@@ -152,11 +152,18 @@ func (a *App) SetHotkey(hotkey string) error {
 		return err
 	}
 
+	// Restart hotkey listener immediately
 	if a.hotkeyListener != nil {
 		a.hotkeyListener.Stop()
 	}
 	a.hotkeyListener.Start(a.config, func() {
-		fmt.Println("Hotkey pressed!")
+		// Dynamic behavior: check user options
+		if a.config.PlayBeep {
+			beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+		}
+		if a.config.ShowNotification {
+			beeep.Notify("Mic Toggle", "Hotkey pressed!", "")
+		}
 	})
 
 	return nil
