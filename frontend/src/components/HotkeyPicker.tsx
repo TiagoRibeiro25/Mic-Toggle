@@ -29,9 +29,7 @@ export default function HotkeyPicker() {
 			return;
 		}
 
-		const mainKey = e.key.length === 1
-			? e.key.toUpperCase()
-			: e.key;
+		const mainKey = e.key.length === 1 ? e.key.toUpperCase() : e.key;
 
 		const combo = [...keys, mainKey].join("+");
 

@@ -5,17 +5,21 @@ import (
 	"fmt"
 
 	"mic-toggle/internal/config"
+	hotkey "mic-toggle/internal/hotkey"
 
-	internal_hotkey "mic-toggle/internal/hotkey"
+	"github.com/energye/systray"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx    context.Context
-	config *config.Config
+	ctx            context.Context
+	config         *config.Config
+	windowVisible  bool
+	hotkeyListener *hotkey.HotkeyListener
 }
 
-// NewApp creates a new App application struct
+// NewApp creates a new App instance
 func NewApp() *App {
 	return &App{}
 }
@@ -29,23 +33,80 @@ func (a *App) startup(ctx context.Context) {
 		panic(err)
 	}
 	a.config = cfg
+	a.windowVisible = false // window is hidden initially
 
-	go func() {
-		internal_hotkey.ListenHotkey(a.config, func() {
-			fmt.Println("Hotkey pressed!")
-			// TODO: show toast or toggle mic
-		})
-	}()
+	// Start hotkey listener in background
+	a.hotkeyListener = &hotkey.HotkeyListener{}
+	a.hotkeyListener.Start(a.config, func() {
+		fmt.Println("Hotkey pressed!")
+	})
+
+	// Start system tray in background
+	go a.RunTray()
 }
 
-// go func() {
-// 	internal_hotkey.DebugKeyboard()
-// }()
+// ShowWindow shows the Wails window
+func (a *App) ShowWindow() {
+	runtime.WindowShow(a.ctx)
+	runtime.WindowCenter(a.ctx)
+	a.windowVisible = true
+}
+
+// HideWindow hides the Wails window
+func (a *App) HideWindow() {
+	runtime.WindowHide(a.ctx)
+	a.windowVisible = false
+}
+
+// IsWindowVisible returns true if the window is currently shown
+func (a *App) IsWindowVisible() bool {
+	return a.windowVisible
+}
+
+// RunTray initializes the system tray
+func (a *App) RunTray() {
+	systray.Run(func() {
+		systray.SetTitle("Mic Toggle")
+		systray.SetTooltip("Mic Toggle App")
+		systray.SetIcon(icon)
+
+		// Click event toggles window visibility
+		systray.SetOnClick(func(menu systray.IMenu) {
+			if a.IsWindowVisible() {
+				a.HideWindow()
+			} else {
+				a.ShowWindow()
+			}
+		})
+
+		// Right click menu
+		systray.SetOnRClick(func(menu systray.IMenu) {
+			menu.ShowMenu()
+		})
+
+		mShowHide := systray.AddMenuItem("Show/Hide", "Show or hide the window")
+		mQuit := systray.AddMenuItem("Quit", "Quit the application")
+
+		mShowHide.Click(func() {
+			if a.IsWindowVisible() {
+				a.HideWindow()
+			} else {
+				a.ShowWindow()
+			}
+		})
+
+		mQuit.Click(func() {
+			systray.Quit()
+			runtime.Quit(a.ctx)
+		})
+	}, func() {
+		// Cleanup on exit
+		fmt.Println("Systray exited")
+	})
+}
 
 // domReady is called after front-end resources have been loaded
-func (a App) domReady(ctx context.Context) {
-	// No action needed yet
-}
+func (a App) domReady(ctx context.Context) {}
 
 // beforeClose is called when the application is about to quit
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
@@ -53,22 +114,31 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 }
 
 // shutdown is called at application termination
-func (a *App) shutdown(ctx context.Context) {
-	// Cleanup if needed
-}
+func (a *App) shutdown(ctx context.Context) {}
 
-// Greet returns a greeting for the given name
+// Greet returns a greeting
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
-// GetHotkey returns the current hotkey from config
+// GetHotkey returns the hotkey from config
 func (a *App) GetHotkey() string {
 	return a.config.Hotkey
 }
 
-// SetHotkey updates the hotkey and saves to disk
+// SetHotkey updates the hotkey and saves config
 func (a *App) SetHotkey(hotkey string) error {
 	a.config.Hotkey = hotkey
-	return config.Save(a.config)
+	if err := config.Save(a.config); err != nil {
+		return err
+	}
+
+	if a.hotkeyListener != nil {
+		a.hotkeyListener.Stop()
+	}
+	a.hotkeyListener.Start(a.config, func() {
+		fmt.Println("Hotkey pressed!")
+	})
+
+	return nil
 }

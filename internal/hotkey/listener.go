@@ -1,9 +1,7 @@
-//go:build windows
-// +build windows
-
 package hotkey
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +12,11 @@ import (
 	"github.com/moutend/go-hook/pkg/types"
 )
 
+// HotkeyListener can start/stop a hotkey listener
+type HotkeyListener struct {
+	cancel context.CancelFunc
+}
+
 // Hotkey struct represents a parsed hotkey combination
 type Hotkey struct {
 	Ctrl  bool
@@ -22,7 +25,7 @@ type Hotkey struct {
 	Key   types.VKCode
 }
 
-// ParseHotkey converts a string like "Ctrl+Shift+M" into a Hotkey struct
+// ParseHotkey converts string like "Ctrl+Shift+M" into Hotkey
 func ParseHotkey(combo string) Hotkey {
 	h := Hotkey{}
 	parts := strings.Split(combo, "+")
@@ -41,63 +44,75 @@ func ParseHotkey(combo string) Hotkey {
 	return h
 }
 
-// KeyNameToVK converts a key name (e.g., "M") to a VKCode
 func KeyNameToVK(name string) types.VKCode {
 	name = strings.ToUpper(strings.TrimSpace(name))
 	if len(name) == 1 && name[0] >= 'A' && name[0] <= 'Z' {
 		return types.VKCode(name[0])
 	}
-	// TODO: Extend for numbers, function keys, etc.
 	return 0
 }
 
-// ListenHotkey installs a global hook and calls callback when the hotkey is pressed
-func ListenHotkey(cfg *config.Config, callback func()) {
-	log.SetFlags(0)
-	log.SetPrefix("hotkey: ")
+// Start begins listening for the hotkey
+func (h *HotkeyListener) Start(cfg *config.Config, callback func()) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	h.cancel = cancel
 
-	keyboardChan := make(chan types.KeyboardEvent, 100)
+	go func() {
+		log.SetFlags(0)
+		log.SetPrefix("hotkey: ")
 
-	if err := keyboard.Install(nil, keyboardChan); err != nil {
-		log.Fatal(err)
-	}
-	defer keyboard.Uninstall()
-
-	hotkey := ParseHotkey(cfg.Hotkey)
-	fmt.Println("Global hotkey listener started:", cfg.Hotkey)
-
-	// Map all left/right variants for modifier keys
-	ctrlKeys := map[types.VKCode]bool{types.VK_LCONTROL: true, types.VK_RCONTROL: true}
-	shiftKeys := map[types.VKCode]bool{types.VK_LSHIFT: true, types.VK_RSHIFT: true}
-	altKeys := map[types.VKCode]bool{types.VK_LMENU: true, types.VK_RMENU: true}
-
-	// Track modifier states
-	modifiers := map[string]bool{
-		"ctrl":  false,
-		"shift": false,
-		"alt":   false,
-	}
-
-	for k := range keyboardChan {
-		// Update modifiers
-		if ctrlKeys[k.VKCode] {
-			modifiers["ctrl"] = k.Message == types.WM_KEYDOWN
+		keyboardChan := make(chan types.KeyboardEvent, 100)
+		if err := keyboard.Install(nil, keyboardChan); err != nil {
+			log.Fatal(err)
 		}
-		if shiftKeys[k.VKCode] {
-			modifiers["shift"] = k.Message == types.WM_KEYDOWN
-		}
-		if altKeys[k.VKCode] {
-			modifiers["alt"] = k.Message == types.WM_KEYDOWN
+		defer keyboard.Uninstall()
+
+		hotkey := ParseHotkey(cfg.Hotkey)
+		fmt.Println("Global hotkey listener started:", cfg.Hotkey)
+
+		ctrlKeys := map[types.VKCode]bool{types.VK_LCONTROL: true, types.VK_RCONTROL: true}
+		shiftKeys := map[types.VKCode]bool{types.VK_LSHIFT: true, types.VK_RSHIFT: true}
+		altKeys := map[types.VKCode]bool{types.VK_LMENU: true, types.VK_RMENU: true}
+
+		modifiers := map[string]bool{
+			"ctrl":  false,
+			"shift": false,
+			"alt":   false,
 		}
 
-		// Check main key
-		if k.Message == types.WM_KEYDOWN &&
-			modifiers["ctrl"] == hotkey.Ctrl &&
-			modifiers["shift"] == hotkey.Shift &&
-			modifiers["alt"] == hotkey.Alt &&
-			k.VKCode == hotkey.Key {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case k := <-keyboardChan:
+				if ctrlKeys[k.VKCode] {
+					modifiers["ctrl"] = k.Message == types.WM_KEYDOWN
+				}
+				if shiftKeys[k.VKCode] {
+					modifiers["shift"] = k.Message == types.WM_KEYDOWN
+				}
+				if altKeys[k.VKCode] {
+					modifiers["alt"] = k.Message == types.WM_KEYDOWN
+				}
 
-			callback()
+				if k.Message == types.WM_KEYDOWN &&
+					modifiers["ctrl"] == hotkey.Ctrl &&
+					modifiers["shift"] == hotkey.Shift &&
+					modifiers["alt"] == hotkey.Alt &&
+					k.VKCode == hotkey.Key {
+					callback()
+				}
+			}
 		}
+	}()
+
+	return nil
+}
+
+// Stop cancels the listener
+func (h *HotkeyListener) Stop() {
+	if h.cancel != nil {
+		h.cancel()
+		h.cancel = nil
 	}
 }

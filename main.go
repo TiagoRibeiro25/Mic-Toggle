@@ -19,7 +19,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:            "wails-events",
+		Title:            "Mic Toggle",
 		Width:            340,
 		Height:           300,
 		DisableResize:    true,
