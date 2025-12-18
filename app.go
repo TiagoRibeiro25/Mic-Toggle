@@ -8,6 +8,7 @@ import (
 	hotkey "mic-toggle/internal/hotkey"
 
 	"github.com/energye/systray"
+	"github.com/gen2brain/beeep"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -39,6 +40,11 @@ func (a *App) startup(ctx context.Context) {
 	a.hotkeyListener = &hotkey.HotkeyListener{}
 	a.hotkeyListener.Start(a.config, func() {
 		fmt.Println("Hotkey pressed!")
+
+		err := beeep.Notify("Mic Toggle", "Hotkey pressed!", "")
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	// Start system tray in background
