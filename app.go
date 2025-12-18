@@ -51,6 +51,9 @@ func (a *App) startup(ctx context.Context) {
 			fmt.Println("Mic muted:", muted)
 		}
 
+		// Emit event to frontend to update UI
+		runtime.EventsEmit(a.ctx, "micStateChanged", muted)
+
 		// Play beep if enabled
 		if a.config.PlayBeep {
 			if err := beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration); err != nil {
@@ -195,4 +198,8 @@ func (a *App) GetPlayBeep() bool {
 
 func (a *App) GetShowNotification() bool {
 	return a.config.ShowNotification
+}
+
+func (a *App) GetMicState() (bool, error) {
+	return mic.IsMuted()
 }

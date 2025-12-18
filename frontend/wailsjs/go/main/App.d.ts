@@ -3,6 +3,8 @@
 
 export function GetHotkey():Promise<string>;
 
+export function GetMicState():Promise<boolean>;
+
 export function GetPlayBeep():Promise<boolean>;
 
 export function GetShowNotification():Promise<boolean>;

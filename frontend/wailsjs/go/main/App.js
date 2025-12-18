@@ -6,6 +6,10 @@ export function GetHotkey() {
   return window['go']['main']['App']['GetHotkey']();
 }
 
+export function GetMicState() {
+  return window['go']['main']['App']['GetMicState']();
+}
+
 export function GetPlayBeep() {
   return window['go']['main']['App']['GetPlayBeep']();
 }

@@ -21,7 +21,7 @@ func main() {
 	err := wails.Run(&options.App{
 		Title:            "Mic Toggle",
 		Width:            340,
-		Height:           385,
+		Height:           500,
 		DisableResize:    true,
 		Assets:           assets,
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},

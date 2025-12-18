@@ -48,3 +48,35 @@ func ToggleMic() (muted bool, err error) {
 
 	return !muted, nil
 }
+
+func IsMuted() (bool, error) {
+	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED); err != nil {
+		return false, err
+	}
+	defer ole.CoUninitialize()
+
+	var mmde *wca.IMMDeviceEnumerator
+	if err := wca.CoCreateInstance(wca.CLSID_MMDeviceEnumerator, 0, wca.CLSCTX_ALL, wca.IID_IMMDeviceEnumerator, &mmde); err != nil {
+		return false, err
+	}
+	defer mmde.Release()
+
+	var mmd *wca.IMMDevice
+	if err := mmde.GetDefaultAudioEndpoint(wca.ECapture, wca.EConsole, &mmd); err != nil {
+		return false, err
+	}
+	defer mmd.Release()
+
+	var aev *wca.IAudioEndpointVolume
+	if err := mmd.Activate(wca.IID_IAudioEndpointVolume, wca.CLSCTX_ALL, nil, &aev); err != nil {
+		return false, err
+	}
+	defer aev.Release()
+
+	var muted bool
+	if err := aev.GetMute(&muted); err != nil {
+		return false, err
+	}
+
+	return muted, nil
+}
