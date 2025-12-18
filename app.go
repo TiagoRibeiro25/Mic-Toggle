@@ -6,6 +6,7 @@ import (
 
 	"mic-toggle/internal/config"
 	hotkey "mic-toggle/internal/hotkey"
+	"mic-toggle/internal/mic"
 
 	"github.com/energye/systray"
 	"github.com/gen2brain/beeep"
@@ -29,6 +30,7 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
+	// Load config
 	cfg, err := config.Load()
 	if err != nil {
 		panic(err)
@@ -41,23 +43,31 @@ func (a *App) startup(ctx context.Context) {
 	a.hotkeyListener.Start(a.config, func() {
 		fmt.Println("Hotkey pressed!")
 
+		// Toggle microphone
+		muted, err := mic.ToggleMic()
+		if err != nil {
+			fmt.Println("Failed to toggle mic:", err)
+		} else {
+			fmt.Println("Mic muted:", muted)
+		}
+
 		// Play beep if enabled
 		if a.config.PlayBeep {
-			err := beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
-			if err != nil {
+			if err := beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration); err != nil {
 				fmt.Println("Beep failed:", err)
 			}
 		}
 
 		// Show notification if enabled
 		if a.config.ShowNotification {
-			err := beeep.Notify("Mic Toggle", "Hotkey pressed!", "")
-			if err != nil {
+			status := "unmuted"
+			if muted {
+				status = "muted"
+			}
+			if err := beeep.Notify("Mic Toggle", "Microphone "+status, ""); err != nil {
 				fmt.Println("Notification failed:", err)
 			}
 		}
-
-		// TODO: toggle mic here if you want
 	})
 
 	// Start system tray in background
