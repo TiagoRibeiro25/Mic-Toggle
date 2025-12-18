@@ -15,8 +15,6 @@ export function HideWindow():Promise<void>;
 
 export function IsWindowVisible():Promise<boolean>;
 
-export function RunTray():Promise<void>;
-
 export function SetHotkey(arg1:string):Promise<void>;
 
 export function SetPlayBeep(arg1:boolean):Promise<void>;

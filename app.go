@@ -4,143 +4,41 @@ import (
 	"context"
 	"fmt"
 
-	"mic-toggle/internal/config"
-	hotkey "mic-toggle/internal/hotkey"
 	"mic-toggle/internal/mic"
-
-	"github.com/energye/systray"
-	"github.com/gen2brain/beeep"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"mic-toggle/internal/service"
 )
 
 // App struct
 type App struct {
-	ctx            context.Context
-	config         *config.Config
-	windowVisible  bool
-	hotkeyListener *hotkey.HotkeyListener
+	ctx           context.Context
+	appService    *service.AppService
+	windowManager *service.WindowManager
+	trayManager   *service.TrayManager
 }
 
 // NewApp creates a new App instance
 func NewApp() *App {
-	return &App{}
+	return &App{
+		appService: service.NewAppService(),
+	}
 }
 
 // startup is called at application startup
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
-	// Load config
-	cfg, err := config.Load()
-	if err != nil {
+	if err := a.appService.Initialize(ctx); err != nil {
 		panic(err)
 	}
-	a.config = cfg
-	a.windowVisible = false // window is hidden initially
 
-	// Start hotkey listener in background
-	a.hotkeyListener = &hotkey.HotkeyListener{}
-	a.hotkeyListener.Start(a.config, func() {
-		fmt.Println("Hotkey pressed!")
+	a.windowManager = service.NewWindowManager(ctx)
+	a.trayManager = service.NewTrayManager(ctx, a.windowManager, icon)
 
-		// Toggle microphone
-		muted, err := mic.ToggleMic()
-		if err != nil {
-			fmt.Println("Failed to toggle mic:", err)
-		} else {
-			fmt.Println("Mic muted:", muted)
-		}
-
-		// Emit event to frontend to update UI
-		runtime.EventsEmit(a.ctx, "micStateChanged", muted)
-
-		// Play beep if enabled
-		if a.config.PlayBeep {
-			if err := beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration); err != nil {
-				fmt.Println("Beep failed:", err)
-			}
-		}
-
-		// Show notification if enabled
-		if a.config.ShowNotification {
-			status := "unmuted"
-			if muted {
-				status = "muted"
-			}
-			if err := beeep.Notify("Mic Toggle", "Microphone "+status, ""); err != nil {
-				fmt.Println("Notification failed:", err)
-			}
-		}
-	})
-
-	// Start system tray in background
-	go a.RunTray()
-}
-
-// ShowWindow shows the Wails window
-func (a *App) ShowWindow() {
-	runtime.WindowShow(a.ctx)
-	runtime.WindowCenter(a.ctx)
-	a.windowVisible = true
-}
-
-// HideWindow hides the Wails window
-func (a *App) HideWindow() {
-	runtime.WindowHide(a.ctx)
-	a.windowVisible = false
-}
-
-// IsWindowVisible returns true if the window is currently shown
-func (a *App) IsWindowVisible() bool {
-	return a.windowVisible
-}
-
-// Initializes the system tray
-func (a *App) RunTray() {
-	systray.Run(func() {
-		systray.SetTitle("Mic Toggle")
-		systray.SetTooltip("Mic Toggle App")
-
-		// TODO: Fix invisible icon
-		systray.SetIcon(icon)
-
-		// Click event toggles window visibility
-		systray.SetOnClick(func(menu systray.IMenu) {
-			if a.IsWindowVisible() {
-				a.HideWindow()
-			} else {
-				a.ShowWindow()
-			}
-		})
-
-		// Right click menu
-		systray.SetOnRClick(func(menu systray.IMenu) {
-			menu.ShowMenu()
-		})
-
-		mShowHide := systray.AddMenuItem("Show/Hide", "Show or hide the window")
-		mQuit := systray.AddMenuItem("Quit", "Quit the application")
-
-		mShowHide.Click(func() {
-			if a.IsWindowVisible() {
-				a.HideWindow()
-			} else {
-				a.ShowWindow()
-			}
-		})
-
-		mQuit.Click(func() {
-			systray.Quit()
-			runtime.Quit(a.ctx)
-		})
-	}, func() {
-		// Cleanup on exit
-		fmt.Println("Systray exited")
-	})
+	go a.trayManager.Run()
 }
 
 // domReady is called after front-end resources have been loaded
-func (a App) domReady(ctx context.Context) {}
+func (a *App) domReady(ctx context.Context) {}
 
 // beforeClose is called when the application is about to quit
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
@@ -150,58 +48,50 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 // shutdown is called at application termination
 func (a *App) shutdown(ctx context.Context) {}
 
-// Greet returns a greeting
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
+// Window management methods
+func (a *App) ShowWindow() {
+	a.windowManager.Show()
 }
 
-// GetHotkey returns the hotkey from config
+func (a *App) HideWindow() {
+	a.windowManager.Hide()
+}
+
+func (a *App) IsWindowVisible() bool {
+	return a.windowManager.IsVisible()
+}
+
+// Configuration methods
 func (a *App) GetHotkey() string {
-	return a.config.Hotkey
+	return a.appService.GetConfig().Hotkey
 }
 
-// SetHotkey updates the hotkey and saves config
 func (a *App) SetHotkey(hotkey string) error {
-	a.config.Hotkey = hotkey
-	if err := config.Save(a.config); err != nil {
-		return err
-	}
-
-	// Restart hotkey listener immediately
-	if a.hotkeyListener != nil {
-		a.hotkeyListener.Stop()
-	}
-	a.hotkeyListener.Start(a.config, func() {
-		// Dynamic behavior: check user options
-		if a.config.PlayBeep {
-			beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
-		}
-		if a.config.ShowNotification {
-			beeep.Notify("Mic Toggle", "Hotkey pressed!", "")
-		}
-	})
-
-	return nil
-}
-
-func (a *App) SetPlayBeep(enabled bool) error {
-	a.config.PlayBeep = enabled
-	return config.Save(a.config)
-}
-
-func (a *App) SetShowNotification(enabled bool) error {
-	a.config.ShowNotification = enabled
-	return config.Save(a.config)
+	return a.appService.UpdateHotkey(hotkey)
 }
 
 func (a *App) GetPlayBeep() bool {
-	return a.config.PlayBeep
+	return a.appService.GetConfig().PlayBeep
+}
+
+func (a *App) SetPlayBeep(enabled bool) error {
+	return a.appService.UpdatePlayBeep(enabled)
 }
 
 func (a *App) GetShowNotification() bool {
-	return a.config.ShowNotification
+	return a.appService.GetConfig().ShowNotification
 }
 
+func (a *App) SetShowNotification(enabled bool) error {
+	return a.appService.UpdateShowNotification(enabled)
+}
+
+// Microphone methods
 func (a *App) GetMicState() (bool, error) {
 	return mic.IsMuted()
+}
+
+// Legacy method (consider removing if not used)
+func (a *App) Greet(name string) string {
+	return fmt.Sprintf("Hello %s, It's show time!", name)
 }

@@ -30,10 +30,6 @@ export function IsWindowVisible() {
   return window['go']['main']['App']['IsWindowVisible']();
 }
 
-export function RunTray() {
-  return window['go']['main']['App']['RunTray']();
-}
-
 export function SetHotkey(arg1) {
   return window['go']['main']['App']['SetHotkey'](arg1);
 }
