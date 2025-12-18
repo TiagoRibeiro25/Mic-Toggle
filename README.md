@@ -1,26 +1,28 @@
-## About
+# Mic Toggle
 
-Wails template which includes: Vite, React, TS, TailwindCSS out of the box.
+A simple utility to toggle your microphone on and off with a keyboard shortcut.
 
-Build with `Wails CLI v2.0.0`.
+<img src="screenshot.png" alt="Mic Toggle Screenshot" width="250"/>
 
-To use this [template](https://wails.io/docs/community/templates):
-```shell
-wails init -n "Your Project Name" -t https://github.com/hotafrika/wails-vite-react-ts-tailwind-template
-cd frontend/src
-npm install
-```
+## Features
 
-[Here](scripts) you can find useful scripts for building on different platforms and Wails CLI installation.
+- Toggle microphone mute/unmute with a single key combination.
+- Customizable hotkey.
+- Sound notification on toggle.
+- System notification on toggle.
+- Tray icon for quick access.
 
-## Live Development
+## Installation
 
-To run in live development mode, run `wails dev` in the project directory. In another terminal, go into the `frontend`
-directory and run `npm run dev`. The frontend dev server will run on http://localhost:34115. Connect to this in your
-browser and connect to your application.
+Download the latest release from the [Releases](https://github.com/TiagoRibeiro25/Mic-Toggle/releases) page and run the executable.
 
-## Building
+## Usage
 
-To build a redistributable, production mode package, use `wails build`.
+1. Run the application.
+2. Use the default hotkey `Ctrl + Shift + M` to toggle the microphone.
+3. Right-click the tray icon to access settings or exit the application.
+4. Customize the hotkey and notification settings in the settings menu.
 
+## License
 
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
