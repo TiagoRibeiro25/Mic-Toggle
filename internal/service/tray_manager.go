@@ -29,7 +29,8 @@ func (t *TrayManager) Run() {
 func (t *TrayManager) onReady() {
 	systray.SetTitle("Mic Toggle")
 	systray.SetTooltip("Mic Toggle App")
-	systray.SetIcon(t.icon)
+	// systray.SetIcon(t.icon)
+	// TODO: Fix icon not showing issue
 
 	systray.SetOnClick(func(menu systray.IMenu) {
 		t.windowManager.Toggle()
