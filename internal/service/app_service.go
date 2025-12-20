@@ -75,6 +75,11 @@ func (s *AppService) playFeedback(muted bool) {
 }
 
 func (s *AppService) UpdateHotkey(hotkey string) error {
+	// If the new hotkey is the same as the current one, do nothing
+	if s.config.Hotkey == hotkey {
+		return nil
+	}
+
 	s.config.Hotkey = hotkey
 	if err := config.Save(s.config); err != nil {
 		return err
